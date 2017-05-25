@@ -199,26 +199,28 @@ citeste_descriere([end_of_file]) :- citeste_linie(Lin), append(Lrez,[end_of_file
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
 
 
-fisier_log_fc(Scop,FC_nou,FC) :- if(directory_exists('output_parcuri'),
+/*fisier_log_fc(Scop,FC_nou,FC) :- if(directory_exists('output_parcuri'),
 						(scrie_fis_ad_fc(Scop,FC_nou,FC)),
 						(make_directory('output_parcuri'),(scrie_fis_ad_fc(Scop,FC_nou,FC)))).
+*/
+director :- if(directory_exists('output_parcuri'),fisier_log_suprascriere,(make_directory('output_parcuri'))).
 numar(Contor):- retract(count(Old)), New is Old + 1,
                 assert(count(New)),Contor is New.
 %timp(-Hour,-Minute,-Seconds)
 timp(H,Mi,S):- datime(datime(Y,M,D,H,Mi,S)).
 %scrie_fis_ad_fc(+Scop,+FC_nou,+FC)
-scrie_fis_ad_fc(Scop,FC_nou,FC):- numar(Contor),timp(H,Mi,S),av(Atr,Val) = Scop,open('output_parcuri/log_stm_expert.txt',append,Stream),
+fisier_log_fc(Scop,FC_nou,FC):- numar(Contor),timp(H,Mi,S),av(Atr,Val) = Scop,open('output_parcuri/log_stm_expert.txt',append,Stream),
                 write(Stream,'\n'),
 				write(Stream,Contor),write(Stream,') ['),write(Stream,H),write(Stream,':'),write(Stream,Mi),write(Stream,':'),
 				write(Stream,S),write(Stream,'] Pentru faptul '),write(Stream,Atr),write(Stream,' = '),write(Stream,Val),
 				write(Stream,' s-a actualizat factorul de certitudine de la '),write(Stream,FC),write(Stream,' la '),write(Stream,FC_nou),write(Stream,'.'),
                 close(Stream).
 
-fisier_log_fapt(Atr,Val) :- if(directory_exists('output_parcuri'),
+/*fisier_log_fapt(Atr,Val) :- if(file_exists('output_parcuri/log_stm_expert.txt'),
 					(scrie_fis_ad_fapt(Atr,Val)),
 					(make_directory('output_parcuri'),(scrie_fis_ad_fapt(Atr,Val)))).
- 
-scrie_fis_ad_fapt(Atr,Val) :- numar(Contor),timp(H,Mi,S),av(Atr,Val) = Scop,open('output_parcuri/log_stm_expert.txt',append,Stream),
+ */
+fisier_log_fapt(Atr,Val) :- numar(Contor),timp(H,Mi,S),av(Atr,Val) = Scop,open('output_parcuri/log_stm_expert.txt',append,Stream),
                 write(Stream,'\n'),               
 			    write(Stream,Contor),write(Stream,') ['),write(Stream,H),write(Stream,':'),write(Stream,Mi),write(Stream,':'),
 				write(Stream,S),write(Stream,'] S-a adaugat faptul '),write(Stream,Atr),write(Stream,' = '),write(Stream,Val),
@@ -226,18 +228,19 @@ scrie_fis_ad_fapt(Atr,Val) :- numar(Contor),timp(H,Mi,S),av(Atr,Val) = Scop,open
 				
 				close(Stream).
 				
-fisier_log_sol(Val):-  if(directory_exists('output_parcuri'),
+/*fisier_log_sol(Val):-  if(directory_exists('output_parcuri'),
 					(scrie_fis_ad_sol(Val)),
 					(make_directory('output_parcuri'),(scrie_fis_ad_sol(Val)))).
-				
-scrie_fis_ad_sol(Val) :- numar(Contor),timp(H,Mi,S),av(Atr,Val) = Scop,open('output_parcuri/log_stm_expert.txt',append,Stream),
+*/				
+fisier_log_sol(Val) :- numar(Contor),timp(H,Mi,S),av(Atr,Val) = Scop,open('output_parcuri/log_stm_expert.txt',append,Stream),
                 write(Stream,'\n'),
 				write(Stream,Contor),write(Stream,') ['),write(Stream,H),write(Stream,':'),write(Stream,Mi),write(Stream,':'),
 				write(Stream,S),write(Stream,'] O noua solutie: parcul '),write(Stream,Val),
 				close(Stream).				
 				
-fisier_log_suprascriere :- if(directory_exists('output_parcuri'),(suprascriere),(make_directory('output_parcuri'),suprascriere)).
-suprascriere:-  open('output_parcuri/log_stm_expert.txt',write,Stream),
+/*fisier_log_suprascriere :- if(directory_exists('output_parcuri'),(suprascriere),(make_directory('output_parcuri'),suprascriere)).
+*/
+fisier_log_suprascriere:-  open('output_parcuri/log_stm_expert.txt',write,Stream),
                %write(Stream,' '),
                 nl(Stream),close(Stream).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
