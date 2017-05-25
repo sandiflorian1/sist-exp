@@ -9,7 +9,6 @@
 :-dynamic regula/3.
 :-dynamic intrebare_curenta/3.
 :-dynamic detalii/4.
-:-dynamic count/1.
 
 not(P):-P,!,fail.
 not(_).
@@ -129,7 +128,7 @@ pornire :-
 	repeat,
 	write('Introduceti una din urmatoarele optiuni: '),
 	nl,nl,
-	(verifica_interogat,write(' (Incarca Consulta Reinitiaza  Afisare_fapte  Cum   Iesire detalii_solutii) ')
+	(verifica_interogat,write(' (Incarca Consulta Reinitiaza  Afisare_fapte  Cum   Iesire Detalii_solutii) ')
 	;
 	 write(' (Incarca Consulta Reinitiaza  Afisare_fapte  Cum   Iesire ) ')),
 	nl,nl,write('|: '),citeste_linie([H|T]),
@@ -140,11 +139,11 @@ verifica_interogat :- bagof(Atr,Val ^ interogat(av(Atr,Val)),L), length( L,N),N 
 executa([incarca]) :- 
 	incarca,!,nl,
 	write('Fisierul dorit a fost incarcat'),nl.
-executa([consulta]) :- retractall(count(_)),assert(count(0)),
-	fisier_log_suprascriere,scopuri_princ,!.
+executa([consulta]) :- scopuri_princ,!.
 executa([reinitiaza]) :- 
 	retractall(interogat(_)),
-	retractall(fapt(_,_,_)),!.
+	retractall(fapt(_,_,_)),
+	retractall(detalii(_,_,_,_)),!.
 executa([afisare_fapte]) :- afiseaza_fapte,!.
 executa([cum|L]) :- cum(L),!.
 executa([iesire]):-!.
@@ -155,17 +154,30 @@ executa([iesire]):-!.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-executa([detalii_solutii]):- verifica_interogat,
+executa([detalii_solutii]):- write('verifica_interogat'),nl,verifica_interogat,
+							write('a terminat verifica_interogat'), nl,
+							
 	see('date_sol.txt'), incarca_detalii,seen,
 	write('Introduceti una din urmatoarele optiuni: '),
 	nl,nl,
 	repeat,
 	write(' afis_descriere afis_ratinguri afis_imagini m_principal ' ),
 	nl,nl,write('|: '),citeste_linie([H|T]),
-	citeste_optiune([H|T]), H == m_principal.
+	citeste_optiune([H|T]), (H == m_principal,!).
+
+%fapt(av(Atr,Val),FC,_), 
+citeste_optiune([afis_descriere,NumeParc]) :- fapt(av(parc,NumeParc),_,_), write(NumeParc),nl,
+											  detalii(NumeParc, _, _, Descriere), write(Descriere),nl.
+citeste_optiune([afis_descriere]) :- bagof(Val,FC ^ I ^ fapt(av(parc,Val),FC,I),Lnume), afiseaza_descriere(Lnume).
+
+afiseaza_descriere([H|T]) :- detalii(H, _, _, Descriere), write(H),nl, write(Descriere),nl, afiseaza_descriere(T).
+afiseaza_descriere([]).									
+									
+citeste_optiune([afis_ratinguri]) :- setof(Rating,NumeParc ^ Imagine ^ Descriere ^ detalii(NumeParc, Imagine, Rating, Descriere),L), write(L),nl .
+citeste_optiune([afis_imagini]) :- setof(Imagine,NumeParc ^ Rating ^ Descriere ^ detalii(NumeParc, Imagine, Rating, Descriere),L), write(L),nl .
+citeste_optiune([m_principal]) :- !.
 
 
-%citeste_optiune([afis_descriere]) :- !.
 
 incarca1(F) :- write('A inceput'),nl,
 	retractall(detalii(_,_,_,_)),
@@ -174,10 +186,10 @@ incarca1(F) :- write('A inceput'),nl,
 incarca_detalii :- repeat,citeste_descriere(L),
 	               proceseaza(L),L == [end_of_file],nl.
 
-citeste_descriere(L) :-  citeste_linie(Lin),write(Lin),nl,
-						 (Lin = ['~'|T],L = [],! ;
-						 Lin == [end_of_file],L = Lin ,! ;
-						 citeste_descriere(Rest), append(Lin,Rest,L)).
+citeste_descriere(L) :-  citeste_linie(Lin), %write(Lin),nl,
+						 (Lin == [end_of_file],L = Lin ,! ;
+						  Lin = ['~'|T],L = [],! ;
+						  citeste_descriere(Rest), append(Lin,Rest,L)).
 				   
 				   
 				   
@@ -196,67 +208,12 @@ citeste_descriere([end_of_file]) :- citeste_linie(Lin), append(Lrez,[end_of_file
 */	
 	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
-
-
-/*fisier_log_fc(Scop,FC_nou,FC) :- if(directory_exists('output_parcuri'),
-						(scrie_fis_ad_fc(Scop,FC_nou,FC)),
-						(make_directory('output_parcuri'),(scrie_fis_ad_fc(Scop,FC_nou,FC)))).
-*/
-director :- if(directory_exists('output_parcuri'),fisier_log_suprascriere,(make_directory('output_parcuri'))).
-numar(Contor):- retract(count(Old)), New is Old + 1,
-                assert(count(New)),Contor is New.
-%timp(-Hour,-Minute,-Seconds)
-timp(H,Mi,S):- datime(datime(Y,M,D,H,Mi,S)).
-%scrie_fis_ad_fc(+Scop,+FC_nou,+FC)
-fisier_log_fc(Scop,FC_nou,FC):- numar(Contor),timp(H,Mi,S),av(Atr,Val) = Scop,open('output_parcuri/log_stm_expert.txt',append,Stream),
-                write(Stream,'\n'),
-				write(Stream,Contor),write(Stream,') ['),write(Stream,H),write(Stream,':'),write(Stream,Mi),write(Stream,':'),
-				write(Stream,S),write(Stream,'] Pentru faptul '),write(Stream,Atr),write(Stream,' = '),write(Stream,Val),
-				write(Stream,' s-a actualizat factorul de certitudine de la '),write(Stream,FC),write(Stream,' la '),write(Stream,FC_nou),write(Stream,'.'),
-                close(Stream).
-
-/*fisier_log_fapt(Atr,Val) :- if(file_exists('output_parcuri/log_stm_expert.txt'),
-					(scrie_fis_ad_fapt(Atr,Val)),
-					(make_directory('output_parcuri'),(scrie_fis_ad_fapt(Atr,Val)))).
- */
-fisier_log_fapt(Atr,Val) :- numar(Contor),timp(H,Mi,S),av(Atr,Val) = Scop,open('output_parcuri/log_stm_expert.txt',append,Stream),
-                write(Stream,'\n'),               
-			    write(Stream,Contor),write(Stream,') ['),write(Stream,H),write(Stream,':'),write(Stream,Mi),write(Stream,':'),
-				write(Stream,S),write(Stream,'] S-a adaugat faptul '),write(Stream,Atr),write(Stream,' = '),write(Stream,Val),
-				write(Stream,' in baza de cunostinte'),
-				
-				close(Stream).
-				
-/*fisier_log_sol(Val):-  if(directory_exists('output_parcuri'),
-					(scrie_fis_ad_sol(Val)),
-					(make_directory('output_parcuri'),(scrie_fis_ad_sol(Val)))).
-*/				
-fisier_log_sol(Val) :- numar(Contor),timp(H,Mi,S),av(Atr,Val) = Scop,open('output_parcuri/log_stm_expert.txt',append,Stream),
-                write(Stream,'\n'),
-				write(Stream,Contor),write(Stream,') ['),write(Stream,H),write(Stream,':'),write(Stream,Mi),write(Stream,':'),
-				write(Stream,S),write(Stream,'] O noua solutie: parcul '),write(Stream,Val),
-				close(Stream).				
-				
-/*fisier_log_suprascriere :- if(directory_exists('output_parcuri'),(suprascriere),(make_directory('output_parcuri'),suprascriere)).
-*/
-fisier_log_suprascriere:-  open('output_parcuri/log_stm_expert.txt',write,Stream),
-               %write(Stream,' '),
-                nl(Stream),close(Stream).
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%folder_solutie(Val,NumeFolder):- now(X),atom_concat('dem_',Val,S),atom_concat(S,'_',S1),atom_concat(S1,X,NumeFolder).
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	
 executa([_|_]) :- write('Comanda incorecta! '),nl.	
 	
-scopuri_princ :- scop(Atr),determina(Atr),fail.
-scopuri_princ :- scop(Atr),Scop = av(Atr,_),
-				 if(setof(st(FC,Scop), Istoric ^ fapt(Scop,FC,Istoric),LF),
-				 (scrie_lista_rev(LF)),
-				 (write('Nu exista solutii'))).
-scrie_lista_rev([]):- nl.
-scrie_lista_rev([H|T]) :- scrie_lista_rev(T), H = st(_,av(Atrib,Val)),
-					   write([Atrib,Val]), tab(1),fisier_log_sol(Val).
+scopuri_princ :- scop(Atr),determina(Atr), afiseaza_scop(Atr),fail.
+scopuri_princ.
+
 determina(Atr) :-
 realizare_scop(av(Atr,_),_,[scop(Atr)]),!.
 determina(_).
@@ -275,24 +232,26 @@ write('factorul de certitudine este '),
 FC1 is integer(FC),write(FC1).
 
 realizare_scop(av(Atr,_),FC,_) :-
-	fapt(av(Atr,nu_conteaza),FC,_),!.
+	fapt(av(Atr,nu_conteaza),FC,_),!.	
+	
 realizare_scop(not Scop,Not_FC,Istorie) :-
-realizare_scop(Scop,FC,Istorie),
-Not_FC is - FC, !.
+	realizare_scop(Scop,FC,Istorie),
+	Not_FC is - FC, !.
+	
 realizare_scop(Scop,FC,_) :-
-fapt(Scop,FC,_), !.
+	fapt(Scop,FC,_), !.
 realizare_scop(Scop,FC,Istorie) :-
-pot_interoga(Scop,Istorie),
-!,realizare_scop(Scop,FC,Istorie).
+	pot_interoga(Scop,Istorie),
+	!,realizare_scop(Scop,FC,Istorie).
 realizare_scop(Scop,FC_curent,Istorie) :-
-fg(Scop,FC_curent,Istorie).
+	fg(Scop,FC_curent,Istorie).
         
 fg(Scop,FC_curent,Istorie) :-
-regula(N, premise(Lista), concluzie(Scop,FC)),
-demonstreaza(N,Lista,FC_premise,Istorie),
-ajusteaza(FC,FC_premise,FC_nou),
-actualizeaza(Scop,FC_nou,FC_curent,N),
-FC_curent == 100,!.
+	regula(N, premise(Lista), concluzie(Scop,FC)),
+	demonstreaza(N,Lista,FC_premise,Istorie),
+	ajusteaza(FC,FC_premise,FC_nou),
+	actualizeaza(Scop,FC_nou,FC_curent,N),
+	FC_curent == 100,!.
 fg(Scop,FC,_) :- fapt(Scop,FC,_).
 
 pot_interoga(av(Atr,_),Istorie) :-
@@ -351,13 +310,13 @@ transformare(av(A,V),[A,este,V]).
 
 
 premisele(N) :-
-regula(N, premise(Lista_premise), _),
-!, cum_premise(Lista_premise).
+	regula(N, premise(Lista_premise), _),
+	!, cum_premise(Lista_premise).
         
 cum_premise([]).
 cum_premise([Scop|X]) :-
-cum(Scop),
-cum_premise(X).
+	cum(Scop),
+	cum_premise(X).
         
 interogheaza(Atr,Mesaj,[da,nu],Istorie) :-
 	!,write(Mesaj),nl,write('da, nu ,nu_stiu, nu_conteaza'),nl,
@@ -370,16 +329,15 @@ interogheaza(Atr,Mesaj,Optiuni,Istorie) :-
 	assert_fapt(Atr,VLista).
 
 
-
 citeste_opt(X,Optiuni,Istorie) :-
-append(['('],Optiuni,Opt1),
-append(Opt1,[')'],Opt),
-scrie_lista(Opt),
-de_la_utiliz(X,Istorie,Optiuni).
+	append(['('],Optiuni,Opt1),
+	append(Opt1,[')'],Opt),
+	scrie_lista(Opt),
+	de_la_utiliz(X,Istorie,Optiuni).
 
 de_la_utiliz(X,Istorie,Lista_opt) :-
-repeat,write(': '),citeste_linie(X),
-proceseaza_raspuns(X,Istorie,Lista_opt).
+	repeat,write(': '),citeste_linie(X),
+	proceseaza_raspuns(X,Istorie,Lista_opt).
 
 proceseaza_raspuns([de_ce],Istorie,_) :-  nl,afis_istorie(Istorie),!,fail.
 
@@ -389,9 +347,9 @@ proceseaza_raspuns([X,fc,FC],_,Lista_opt):-
 	member(X,Lista_opt),float(FC).
 
 assert_fapt(Atr,[Val,fc,FC]) :-
-	!,asserta( fapt(av(Atr,Val),FC,[utiliz]) ),fisier_log_fapt(Atr,Val).
+	!,asserta( fapt(av(Atr,Val),FC,[utiliz]) ).
 assert_fapt(Atr,[Val]) :-
-	asserta( fapt(av(Atr,Val),100,[utiliz])),fisier_log_fapt(Atr,Val).
+	asserta( fapt(av(Atr,Val),100,[utiliz])).
 
 det_val_fc([nu],da,-100).
 det_val_fc([nu,FC],da,NFC) :- NFC is -FC.
@@ -421,8 +379,7 @@ actualizeaza(Scop,FC_nou,FC,RegulaN) :-
 	fapt(Scop,FC_vechi,_),
 	combina(FC_nou,FC_vechi,FC),
 	retract( fapt(Scop,FC_vechi,Reguli_vechi) ),
-	asserta( fapt(Scop,FC,[RegulaN | Reguli_vechi]) ),!,
-	fisier_log_fc(Scop,FC_nou,FC).
+	asserta( fapt(Scop,FC,[RegulaN | Reguli_vechi]) ),!.
 actualizeaza(Scop,FC,FC,RegulaN) :-
 	asserta( fapt(Scop,FC,[RegulaN]) ).
 
@@ -457,14 +414,13 @@ incarca(F) :-
 	see(F),incarca_reguli,seen,!.
 
 incarca_reguli :-
-	repeat,citeste_propozitie(L), write(L),nl,nl,
+	repeat,citeste_propozitie(L),
 	proceseaza(L),L == [end_of_file],nl.
 
 proceseaza([end_of_file]):-!.
 proceseaza(L) :-
 	trad(R,L,[]),assertz(R), !.
 trad(scop(X)) --> [scop,':',X].
-trad(scop(X)) --> [scopul,X].
 
 trad(interogabil(Atr,M,P)) --> ['?',':',Atr],lista_optiuni(M),afiseaza(Atr,P).
 trad(regula(N,premise(Daca),concluzie(Atunci,F))) --> identificator(N),daca(Daca),atunci(Atunci,F),!.
@@ -475,16 +431,17 @@ trad(regula(N,premise(Daca),concluzie(Atunci,F))) --> identificator(N),daca(Daca
 trad(detalii(NumeParc, Imagine, Rating, Descriere)) --> nume_parc(NumeParc),imagine(Imagine),rating(Rating),descriere(Descriere),!.
 trad('Eroare la parsare'-L,L,_).
 
-nume_parc(NumeParc) --> [parc,'--','>','['],[NumeParc],[']'],!.
-imagine(Imagine)--> [imagine,'--','>','['],[Imagine],[']'],!.
+nume_parc(NumeParc) --> [parc,'--','>','[',NumeParc,']'],!.
+imagine(Imagine)--> [imagine,'--','>','[',Imagine,']'],!.
 
 
-rating(Rating)--> [ratinguri,'--','>','['],rating(Rating).
-rating([rat(Atr,Val)])--> [Atr],[':'],[Val],['/','5',']'].
-rating([rat(Atr,Val)|T]) --> [Atr],[':'],[Val],['/','5'],rating(T). 
+rating(Rating)--> [ratinguri,'--','>','['],lista_rating(Rating).
+lista_rating([rat(Atr,Val)|T]) --> [Atr,':',Val,'/',5.0],lista_rating(T). 
+lista_rating([rat(Atr,Val)])--> [Atr,':',Val,'/',5.0,']'],!.
 
 
-descriere(Descriere) --> [descriere,'--','>','['],[Descriere],[']'],!.
+
+descriere(Descriere) --> [descriere,'--','>','[',Descriere,']'],!.
 
 
 lista_optiuni(M) --> [cu,valorile,'=','('],lista_de_optiuni(M).
