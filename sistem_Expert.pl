@@ -9,6 +9,8 @@
 :-dynamic regula/3.
 :-dynamic intrebare_curenta/3.
 :-dynamic detalii/4.
+:-dynamic count/1.
+:-dynamic solutii/2.
 
 not(P):-P,!,fail.
 not(_).
@@ -139,7 +141,8 @@ verifica_interogat :- bagof(Atr,Val ^ interogat(av(Atr,Val)),L), length( L,N),N 
 executa([incarca]) :- 
 	incarca,!,nl,
 	write('Fisierul dorit a fost incarcat'),nl.
-executa([consulta]) :- scopuri_princ,!.
+executa([consulta]) :- retractall(count(_)),assert(count(0)),
+					fisier_log_suprascriere,scopuri_princ,!.
 executa([reinitiaza]) :- 
 	retractall(interogat(_)),
 	retractall(fapt(_,_,_)),
@@ -206,14 +209,73 @@ citeste_descriere([]) :- citeste_linie(Lin), Lin = ['~'|T].
 citeste_descriere(L) :-  citeste_linie(Lin), citeste_descriere(Rest), append(Lin,Rest,L).	
 citeste_descriere([end_of_file]) :- citeste_linie(Lin), append(Lrez,[end_of_file],Lrez).
 */	
-	
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+director :- if(directory_exists('output_parcuri'),fisier_log_suprascriere,(make_directory('output_parcuri'))).
+numar(Contor):- retract(count(Old)), New is Old + 1,
+                assert(count(New)),Contor is New.
+%timp(-Hour,-Minute,-Seconds)
+timp(H,Mi,S):- datime(datime(Y,M,D,H,Mi,S)).
+%scrie_fis_ad_fc(+Scop,+FC_nou,+FC)
+fisier_log_fc(Scop,FC_nou,FC):- numar(Contor),timp(H,Mi,S),av(Atr,Val) = Scop,open('output_parcuri/log_stm_expert.txt',append,Stream),
+                write(Stream,'\n'),
+				write(Stream,Contor),write(Stream,') ['),write(Stream,H),write(Stream,':'),write(Stream,Mi),write(Stream,':'),
+				write(Stream,S),write(Stream,'] Pentru faptul '),write(Stream,Atr),write(Stream,' = '),write(Stream,Val),
+				write(Stream,' s-a actualizat factorul de certitudine de la '),write(Stream,FC),write(Stream,' la '),write(Stream,FC_nou),write(Stream,'.'),
+                close(Stream).
+
+fisier_log_fapt(Atr,Val) :- numar(Contor),timp(H,Mi,S),av(Atr,Val) = Scop,open('output_parcuri/log_stm_expert.txt',append,Stream),
+                write(Stream,'\n'),               
+			    write(Stream,Contor),write(Stream,') ['),write(Stream,H),write(Stream,':'),write(Stream,Mi),write(Stream,':'),
+				write(Stream,S),write(Stream,'] S-a adaugat faptul '),write(Stream,Atr),write(Stream,' = '),write(Stream,Val),
+				write(Stream,' in baza de cunostinte'),
+				close(Stream).
+								
+fisier_log_sol(Val) :- numar(Contor),timp(H,Mi,S),av(Atr,Val) = Scop,open('output_parcuri/log_stm_expert.txt',append,Stream),
+                write(Stream,'\n'),
+				write(Stream,Contor),write(Stream,') ['),write(Stream,H),write(Stream,':'),write(Stream,Mi),write(Stream,':'),
+				write(Stream,S),write(Stream,'] O noua solutie: parcul '),write(Stream,Val),
+				close(Stream).				
+				
+/*fisier_log_suprascriere :- if(directory_exists('output_parcuri'),(suprascriere),(make_directory('output_parcuri'),suprascriere)).
+*/
+fisier_log_suprascriere:-  open('output_parcuri/log_stm_expert.txt',write,Stream),
+               %write(Stream,' '),
+                nl(Stream),close(Stream).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%folder_solutie(Val,NumeFolder):- now(X),atom_concat('dem_',Val,S),atom_concat(S,'_',S1),atom_concat(S1,X,NumeFolder).
+
+denumire_folder(Val,Den,T):- atom_concat('dem_',Val,Sir1),atom_concat(Sir1,'_',Sir2),
+					atom_chars(Sir2,Sir),number_chars(T,N),append(Sir,N,List),atom_chars('output_parcuri/',Dir),
+					append(Dir,List,Den1),atom_chars(Den,Den1).
+					
+lista_solutii(Ls):- bagof(Solutii,X^solutii(Sol,X),Ls).
+creare_folder_sol(Val) :- solutii(Val,Tv),denumire_folder(Val,DenV,Tv),now(Tn),denumire_folder(Val,DenN,Tn),
+						lista_solutii(Ls),nr_aparitii(Val,Ls,Nr),
+						if((member(Val,Ls),(Nr > 1)),(rename_directory(DenV,DenN)),(make_directory(DenN))),
+						denumire_fisier(DenN,Den_fis).%,scrie_demonstratii(Den_fis,N).
+denumire_fisier(Den,Den_fis):- atom_concat(Den,'/demonstratie_raspuns.txt',Den_fis).
+
+nr_aparitii(Val,Ls,Nr):- count(Ls,Val,Nr).
+
+count([],X,0).
+count([X|T],X,Y):- count(T,X,Z), Y is 1+Z.
+count([X1|T],X,Z):- X1\=X,count(T,X,Z).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
 	
 executa([_|_]) :- write('Comanda incorecta! '),nl.	
 	
-scopuri_princ :- scop(Atr),determina(Atr), afiseaza_scop(Atr),fail.
-scopuri_princ.
-
+%scopuri_princ :- scop(Atr),determina(Atr), afiseaza_scop(Atr),fail.
+%scopuri_princ.
+scopuri_princ :- scop(Atr),determina(Atr),fail.
+scopuri_princ :- scop(Atr),Scop = av(Atr,_),
+				 if(setof(st(FC,Scop), Istoric ^ fapt(Scop,FC,Istoric),LF),
+				 (scrie_lista_rev(LF)),
+				 (write('Nu exista solutii'),nl)).
+scrie_lista_rev([]):- nl.
+scrie_lista_rev([H|T]) :- scrie_lista_rev(T), H = st(_,av(Atrib,Val)),
+					   afiseaza_scop(Atrib), tab(1),fisier_log_sol(Val),now(X),
+					   assert(solutii(Val,X)),
+					   creare_folder_sol(Val).
 determina(Atr) :-
 realizare_scop(av(Atr,_),_,[scop(Atr)]),!.
 determina(_).
@@ -347,9 +409,9 @@ proceseaza_raspuns([X,fc,FC],_,Lista_opt):-
 	member(X,Lista_opt),float(FC).
 
 assert_fapt(Atr,[Val,fc,FC]) :-
-	!,asserta( fapt(av(Atr,Val),FC,[utiliz]) ).
+	!,asserta( fapt(av(Atr,Val),FC,[utiliz]) ),fisier_log_fapt(Atr,Val).
 assert_fapt(Atr,[Val]) :-
-	asserta( fapt(av(Atr,Val),100,[utiliz])).
+	asserta( fapt(av(Atr,Val),100,[utiliz])),fisier_log_fapt(Atr,Val).
 
 det_val_fc([nu],da,-100).
 det_val_fc([nu,FC],da,NFC) :- NFC is -FC.
@@ -379,7 +441,8 @@ actualizeaza(Scop,FC_nou,FC,RegulaN) :-
 	fapt(Scop,FC_vechi,_),
 	combina(FC_nou,FC_vechi,FC),
 	retract( fapt(Scop,FC_vechi,Reguli_vechi) ),
-	asserta( fapt(Scop,FC,[RegulaN | Reguli_vechi]) ),!.
+	asserta( fapt(Scop,FC,[RegulaN | Reguli_vechi]) ),!,
+	fisier_log_fc(Scop,FC_nou,FC).
 actualizeaza(Scop,FC,FC,RegulaN) :-
 	asserta( fapt(Scop,FC,[RegulaN]) ).
 
