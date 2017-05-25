@@ -126,8 +126,6 @@ pornire :-
 	retractall(interogat(_)),
 	retractall(fapt(_,_,_)),
 	retractall(intrebare_curenta(_,_,_)),
-	retractall(count(_)),assert(count(0)),
-	fisier_log_suprascriere,
 	repeat,
 	write('Introduceti una din urmatoarele optiuni: '),
 	nl,nl,
@@ -142,7 +140,8 @@ verifica_interogat :- bagof(Atr,Val ^ interogat(av(Atr,Val)),L), length( L,N),N 
 executa([incarca]) :- 
 	incarca,!,nl,
 	write('Fisierul dorit a fost incarcat'),nl.
-executa([consulta]) :- scopuri_princ,!.
+executa([consulta]) :- retractall(count(_)),assert(count(0)),
+	fisier_log_suprascriere,scopuri_princ,!.
 executa([reinitiaza]) :- 
 	retractall(interogat(_)),
 	retractall(fapt(_,_,_)),!.
@@ -244,6 +243,10 @@ fisier_log_suprascriere:-  open('output_parcuri/log_stm_expert.txt',write,Stream
                %write(Stream,' '),
                 nl(Stream),close(Stream).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%folder_solutie(Val,NumeFolder):- now(X),atom_concat('dem_',Val,S),atom_concat(S,'_',S1),atom_concat(S1,X,NumeFolder).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 executa([_|_]) :- write('Comanda incorecta! '),nl.	
 	
 scopuri_princ :- scop(Atr),determina(Atr),fail.
@@ -271,6 +274,8 @@ write(' '),
 write('factorul de certitudine este '),
 FC1 is integer(FC),write(FC1).
 
+realizare_scop(av(Atr,_),FC,_) :-
+	fapt(av(Atr,nu_conteaza),FC,_),!.
 realizare_scop(not Scop,Not_FC,Istorie) :-
 realizare_scop(Scop,FC,Istorie),
 Not_FC is - FC, !.
@@ -355,14 +360,15 @@ cum(Scop),
 cum_premise(X).
         
 interogheaza(Atr,Mesaj,[da,nu],Istorie) :-
-!,write(Mesaj),nl,
-de_la_utiliz(X,Istorie,[da,nu]),
-det_val_fc(X,Val,FC),
-asserta( fapt(av(Atr,Val),FC,[utiliz]) ).
+	!,write(Mesaj),nl,write('da, nu ,nu_stiu, nu_conteaza'),nl,
+	de_la_utiliz(X,Istorie,[da,nu,nu_stiu,nu_conteaza]),
+	det_val_fc(X,Val,FC),
+	asserta( fapt(av(Atr,Val),FC,[utiliz]) ).
 interogheaza(Atr,Mesaj,Optiuni,Istorie) :-
-write(Mesaj),nl,
-citeste_opt(VLista,Optiuni,Istorie),
-assert_fapt(Atr,VLista).
+	write(Mesaj),nl, append(Optiuni,[nu_stiu,nu_conteaza],OptiuniNoi),
+	citeste_opt(VLista,OptiuniNoi,Istorie),
+	assert_fapt(Atr,VLista).
+
 
 
 citeste_opt(X,Optiuni,Istorie) :-
