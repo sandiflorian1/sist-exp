@@ -142,7 +142,7 @@ executa([incarca]) :-
 	incarca,!,nl,
 	write('Fisierul dorit a fost incarcat'),nl.
 executa([consulta]) :- retractall(count(_)),assert(count(0)),
-					fisier_log_suprascriere,scopuri_princ,!.
+					director,scopuri_princ,!.
 executa([reinitiaza]) :- 
 	retractall(interogat(_)),
 	retractall(fapt(_,_,_)),
