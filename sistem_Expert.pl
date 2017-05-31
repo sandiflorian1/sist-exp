@@ -11,6 +11,7 @@
 :-dynamic detalii/4.
 :-dynamic count/1.
 :-dynamic solutii/2.
+:-dynamic pascupas/1.
 
 not(P):-P,!,fail.
 not(_).
@@ -142,14 +143,17 @@ executa([incarca]) :-
 	incarca,!,nl,
 	write('Fisierul dorit a fost incarcat'),nl.
 executa([consulta]) :- retractall(count(_)),assert(count(0)),
-					director,scopuri_princ,!.
+					director,intrebare,scopuri_princ,!.
 executa([reinitiaza]) :- 
 	retractall(interogat(_)),
+	retractall(pascupas(_)),
 	retractall(fapt(_,_,_)),
 	retractall(detalii(_,_,_,_)),!.
 executa([afisare_fapte]) :- afiseaza_fapte,!.
 executa([cum|L]) :- cum(L),!.
 executa([iesire]):-!.
+
+intrebare:- write('Doriti sa afisati pas de pas cunostintele sistemului expert?'),nl,citeste_linie(X),assert(pascupas(X)),nl,!.
 
 
 %executa([detalii_solutii]):- bagof(Atr,Val ^ interogat(av(Atr,Val)),L), write(L),nl,nl,!.
@@ -384,11 +388,13 @@ interogheaza(Atr,Mesaj,[da,nu],Istorie) :-
 	!,write(Mesaj),nl,write('da, nu ,nu_stiu, nu_conteaza'),nl,
 	de_la_utiliz(X,Istorie,[da,nu,nu_stiu,nu_conteaza]),
 	det_val_fc(X,Val,FC),
-	asserta( fapt(av(Atr,Val),FC,[utiliz]) ).
+	asserta( fapt(av(Atr,Val),FC,[utiliz]) ),
+	((pascupas(X),X == [da])->afiseaza_fapte;true).
 interogheaza(Atr,Mesaj,Optiuni,Istorie) :-
 	write(Mesaj),nl, append(Optiuni,[nu_stiu,nu_conteaza],OptiuniNoi),
 	citeste_opt(VLista,OptiuniNoi,Istorie),
-	assert_fapt(Atr,VLista).
+	assert_fapt(Atr,VLista),
+	((pascupas(X),X == [da])->afiseaza_fapte;true).
 
 
 citeste_opt(X,Optiuni,Istorie) :-
