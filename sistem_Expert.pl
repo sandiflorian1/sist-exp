@@ -246,8 +246,6 @@ fisier_log_suprascriere:-  open('output_parcuri/log_stm_expert.txt',write,Stream
                %write(Stream,' '),
                 nl(Stream),close(Stream).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%folder_solutie(Val,NumeFolder):- now(X),atom_concat('dem_',Val,S),atom_concat(S,'_',S1),atom_concat(S1,X,NumeFolder).
-
 denumire_folder(Val,Den,T):- atom_concat('dem_',Val,Sir1),atom_concat(Sir1,'_',Sir2),
 					atom_chars(Sir2,Sir),number_chars(T,N),append(Sir,N,List),atom_chars('output_parcuri/',Dir),
 					append(Dir,List,Den1),atom_chars(Den,Den1).
@@ -258,6 +256,8 @@ creare_folder_sol(Val) :- solutii(Val,Tv),denumire_folder(Val,DenV,Tv),now(Tn),d
 						if((member(Val,Ls),(Nr > 1)),(rename_directory(DenV,DenN)),(make_directory(DenN))),
 						denumire_fisier(DenN,Den_fis).%,scrie_demonstratii(Den_fis,N).
 denumire_fisier(Den,Den_fis):- atom_concat(Den,'/demonstratie_raspuns.txt',Den_fis).
+%vede de cate ori apare solutia in folderul nou creat adica cate foldere cu demonstratie_solutie exista
+%pentru cazul cand trebuie sa redenumim trebuie sa existe fisiere => pe scurt daca avem mai mult de un folder pentru solutia resp trebuie sa redenumim
 
 nr_aparitii(Val,Ls,Nr):- count(Ls,Val,Nr).
 
@@ -389,13 +389,27 @@ interogheaza(Atr,Mesaj,[da,nu],Istorie) :-
 	de_la_utiliz(X,Istorie,[da,nu,nu_stiu,nu_conteaza]),
 	det_val_fc(X,Val,FC),
 	asserta( fapt(av(Atr,Val),FC,[utiliz]) ),
-	((pascupas(X),X == [da])->afiseaza_fapte;true).
+	((pascupas(X1),X1 == [da])->afiseaza_fapte_pascupas;true).
 interogheaza(Atr,Mesaj,Optiuni,Istorie) :-
 	write(Mesaj),nl, append(Optiuni,[nu_stiu,nu_conteaza],OptiuniNoi),
 	citeste_opt(VLista,OptiuniNoi,Istorie),
 	assert_fapt(Atr,VLista),
-	((pascupas(X),X == [da])->afiseaza_fapte;true).
+	((pascupas(X),X == [da])->afiseaza_fapte_pascupas;true).
 
+afiseaza_fapte_pascupas:-
+nl,
+write('Pana acum sistemul conoastete:'),
+nl,nl,
+listeaza_fapte_pascupas,nl.
+
+listeaza_fapte_pascupas:-  
+fapt(av(Atr,Val),FC,_), 
+write(Atr),write('  cu valoarea:  '),
+write(Val),
+write(', iar certitudinea este '),
+FC1 is integer(FC),write(FC1),
+nl,fail.
+listeaza_fapte_pascupas.
 
 citeste_opt(X,Optiuni,Istorie) :-
 	append(['('],Optiuni,Opt1),
